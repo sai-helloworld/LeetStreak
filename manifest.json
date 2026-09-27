@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Forestreak",
+  "version": "3.2.4",
+  "description": "Grow a 3D virtual forest based on multi-platform coding streaks.",
+  "permissions": ["storage", "alarms"],
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "https://api.github.com/*",
+    "https://codeforces.com/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html"
+  },
+  "background": {
+    "service_worker": "background/service_worker.js",
+    "type": "module"
+  }
+}

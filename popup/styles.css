@@ -1,0 +1,279 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  width: 380px;
+  background-color: #090c15;
+  color: #e0e6ed;
+  padding: 12px;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h1 {
+  font-size: 1.1rem;
+  color: #00f3ff;
+  text-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-size: 1rem;
+}
+
+.world-viewport {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 243, 255, 0.15);
+  border: 1px solid #1a233d;
+  background-color: #05070f;
+}
+
+#forest3dCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.streak-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(10, 15, 30, 0.85);
+  border: 1px solid #00f3ff;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  color: #00f3ff;
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+}
+
+.hud-card {
+  position: absolute;
+  bottom: 24px;
+  left: 12px;
+  right: 12px;
+  background: rgba(10, 15, 30, 0.92);
+  border: 1px solid #ff0055;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 0 15px rgba(255, 0, 85, 0.4);
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+.hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 0, 85, 0.3);
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  font-weight: bold;
+  color: #ff0055;
+}
+
+.hud-header button {
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.hud-body div {
+  margin-top: 2px;
+}
+
+.controls-hint {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.6rem;
+  color: #7882a4;
+  pointer-events: none;
+}
+
+.debug-panel {
+  background: #0f1424;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #1a233d;
+  font-size: 0.8rem;
+}
+
+.debug-panel h3 {
+  font-size: 0.85rem;
+  color: #00f3ff;
+  margin-bottom: 6px;
+}
+
+.debug-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dashed #1a233d;
+}
+
+.tree-size-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+.tree-chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #141b2d;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  border: 1px solid #202b46;
+}
+
+.tree-id {
+  color: #9aa5ce;
+  font-weight: 600;
+}
+
+.tree-size strong {
+  color: #00f3ff;
+}
+
+.tree-date {
+  color: #647294;
+  font-size: 0.7rem;
+}
+
+.empty-list {
+  color: #556285;
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.profiles-section {
+  background: #0f1424;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  border: 1px solid #1a233d;
+}
+
+.profiles-section summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #00f3ff;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+input {
+  padding: 6px;
+  background: #090c15;
+  border: 1px solid #202b46;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+form button {
+  background: linear-gradient(135deg, #00f3ff, #0088ff);
+  color: #000;
+  padding: 6px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+/* Expand Viewport Container */
+#viewportContainer {
+  position: relative;
+  width: 100%;
+  max-width: 900px; /* Increased width */
+  margin: 0 auto;
+}
+
+#cyberCanvas {
+  width: 100%;
+  height: 480px; /* Deepened height for scanning wide colonies */
+  border-radius: 12px;
+  box-shadow: 0 0 25px rgba(0, 243, 255, 0.15);
+  display: block;
+}
+
+/* On-Screen D-Pad & Camera Movement Controls */
+.camera-controls-overlay {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.85);
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  backdrop-filter: blur(8px);
+  z-index: 10;
+}
+
+.control-row {
+  display: flex;
+  gap: 4px;
+}
+
+.ctrl-btn {
+  width: 32px;
+  height: 32px;
+  background: #1e293b;
+  border: 1px solid #00f3ff;
+  color: #00f3ff;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.ctrl-btn:hover {
+  background: #00f3ff;
+  color: #0f172a;
+  box-shadow: 0 0 8px #00f3ff;
+}
+
+.ctrl-btn:active {
+  transform: scale(0.92);
+}

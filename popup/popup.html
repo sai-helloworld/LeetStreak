@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>LeetCode Code City 3D</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🏙️ Cyber Skyline 3D</h1>
+        <button id="syncBtn" title="Sync Activity">🔄</button>
+      </header>
+
+      <!-- 3D City Viewport -->
+      <div class="world-viewport">
+        <canvas id="forest3dCanvas"></canvas>
+        <div class="streak-badge">
+          <span id="streakCount">0</span> Floor Active Tower ⚡
+        </div>
+
+        <!-- Interactive Click Tooltip HUD -->
+        <div id="hudCard" class="hud-card" style="display: none"></div>
+
+        <div class="controls-hint">
+          Left Click + Drag: Orbit | Scroll: Zoom | Click Building for Details
+        </div>
+      </div>
+
+      <!-- City Building Inspector -->
+      <div class="debug-panel">
+        <h3>📊 City Building Inspector</h3>
+        <div class="debug-item active-debug">
+          <span>Active Building:</span>
+          <strong id="activeTreeSize">0 floors</strong>
+        </div>
+        <div class="debug-item">
+          <span>Completed City Buildings:</span>
+          <strong id="totalForestCount">0 buildings</strong>
+        </div>
+        <div id="treeSizeList" class="tree-size-list">
+          <!-- Calculated building floor count list will populate here -->
+        </div>
+      </div>
+
+      <!-- LeetCode Profile Config -->
+      <details class="profiles-section">
+        <summary>LeetCode Profile Settings</summary>
+        <form id="profileForm">
+          <input
+            type="text"
+            id="leetcodeInput"
+            placeholder="Enter LeetCode Username"
+            required
+          />
+          <button type="submit">Sync Skyline</button>
+        </form>
+      </details>
+    </div>
+    <div id="viewportContainer">
+      <canvas id="cyberCanvas" width="900" height="480"></canvas>
+
+      <!-- HUD Card overlay -->
+      <div id="hudCard" class="hud-card"></div>
+
+      <!-- Camera Move Controls -->
+      <div class="camera-controls-overlay">
+        <button class="ctrl-btn" id="btnPanUp" title="Pan Forward (W)">
+          ▲
+        </button>
+        <div class="control-row">
+          <button class="ctrl-btn" id="btnPanLeft" title="Pan Left (A)">
+            ◄
+          </button>
+          <button class="ctrl-btn" id="btnPanReset" title="Reset View (R)">
+            ⟲
+          </button>
+          <button class="ctrl-btn" id="btnPanRight" title="Pan Right (D)">
+            ►
+          </button>
+        </div>
+        <button class="ctrl-btn" id="btnPanDown" title="Pan Backward (S)">
+          ▼
+        </button>
+      </div>
+    </div>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
