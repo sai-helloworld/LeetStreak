@@ -1,19 +1,19 @@
 {
-  "manifest_version": 4,
-  "name": "Forestreak",
-  "version": "4.0.0",
-  "description": "Grow a 3D virtual forest based on multi-platform coding streaks.",
-  "permissions": ["storage", "alarms"],
+  "manifest_version": 3,
+  "name": "LeetCode Cyber City Calendar",
+  "version": "2.1.0",
+  "description": "3D Calendar Matrix showing LeetCode submission streaks as cyber skyscrapers, roads, and empty plots.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_width": 960,
+    "default_height": 720
+  },
+  "permissions": ["storage"],
   "host_permissions": [
     "https://leetcode.com/*",
-    "https://api.github.com/*",
-    "https://codeforces.com/*"
+    "https://alfa-leetcode-api.onrender.com/*"
   ],
-  "action": {
-    "default_popup": "popup/popup.html"
-  },
-  "background": {
-    "service_worker": "background/service_worker.js",
-    "type": "module"
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }

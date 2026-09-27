@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>LeetCode Cyber City Calendar</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="extension-container">
+      <header class="header">
+        <h2>⚡ LEETCODE CYBER CITY</h2>
+
+        <!-- Username Fetch Bar -->
+        <div class="user-input-container">
+          <input
+            type="text"
+            id="usernameInput"
+            placeholder="LeetCode Username..."
+            value="leetcode"
+          />
+          <button id="fetchBtn">FETCH CITY</button>
+        </div>
+
+        <div class="streak-badge" id="currentStreakBadge">STREAK: 0 DAYS</div>
+      </header>
+
+      <!-- Loading Overlay -->
+      <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">CONNECTING TO LEETCODE MATRIX...</div>
+      </div>
+
+      <!-- 3D Calendar Viewport -->
+      <div id="viewportContainer">
+        <canvas id="cyberCanvas" width="920" height="460"></canvas>
+
+        <!-- Hover Tooltip HUD -->
+        <div id="hudCard" class="hud-card"></div>
+      </div>
+
+      <!-- Navigation Controls Directly Below Viewport -->
+      <div class="controls-panel-below">
+        <div class="panel-label">CAMERA & NAVIGATION CONTROLS</div>
+        <div class="dpad-container">
+          <button class="ctrl-btn" id="btnPanUp" title="Pan North (W / ▲)">
+            ▲
+          </button>
+          <div class="control-row">
+            <button class="ctrl-btn" id="btnPanLeft" title="Pan West (A / ◄)">
+              ◄
+            </button>
+            <button
+              class="ctrl-btn reset-btn"
+              id="btnPanReset"
+              title="Reset Camera View (R)"
+            >
+              RESET
+            </button>
+            <button class="ctrl-btn" id="btnPanRight" title="Pan East (D / ►)">
+              ►
+            </button>
+          </div>
+          <button class="ctrl-btn" id="btnPanDown" title="Pan South (S / ▼)">
+            ▼
+          </button>
+        </div>
+        <div class="help-hint">
+          <strong>Mouse Drag:</strong> Orbit Angle |
+          <strong>Scroll Wheel:</strong> Zoom In/Out |
+          <strong>WASD / Keys:</strong> Pan Matrix
+        </div>
+      </div>
+
+      <!-- NEW: API Data Verification & Debug Panel -->
+      <div class="debug-panel">
+        <div class="debug-header">
+          <span class="debug-title">📡 DATA FETCH MONITOR</span>
+          <span id="debugStatus" class="debug-status-tag status-idle"
+            >STANDBY</span
+          >
+        </div>
+        <div class="debug-grid">
+          <div class="debug-metric">
+            <span class="metric-label">Target User:</span>
+            <span id="debugUsername" class="metric-val">--</span>
+          </div>
+          <div class="debug-metric">
+            <span class="metric-label">API Endpoint:</span>
+            <span id="debugSource" class="metric-val">--</span>
+          </div>
+          <div class="debug-metric">
+            <span class="metric-label">Active Days (35d):</span>
+            <span id="debugActiveDays" class="metric-val">--</span>
+          </div>
+          <div class="debug-metric">
+            <span class="metric-label">Total Submissions:</span>
+            <span id="debugTotalSubs" class="metric-val">--</span>
+          </div>
+        </div>
+        <div id="debugLog" class="debug-log">
+          > Ready to verify connection...
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
