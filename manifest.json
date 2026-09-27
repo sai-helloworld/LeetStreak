@@ -1,7 +1,7 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 4,
   "name": "Forestreak",
-  "version": "3.2.4",
+  "version": "4.0.0",
   "description": "Grow a 3D virtual forest based on multi-platform coding streaks.",
   "permissions": ["storage", "alarms"],
   "host_permissions": [
