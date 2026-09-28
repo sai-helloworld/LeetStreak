@@ -2,13 +2,13 @@
  * Array of vibrant cyberpunk neon colors for continuous streaks
  */
 const STREAK_PALETTE = [
-  0x00f3ff, // Neon Cyan
+  0x19e68d, // Green
   0xff0055, // Cyber Pink
   0x10b981, // Emerald Green
   0xf59e0b, // Amber Gold
   0x8b5cf6, // Purple
   0xec4899, // Hot Pink
-  0x06b6d4, // Bright Teal
+  0xe2e619, // yellow
   0x84cc16, // Lime Green
 ];
 
@@ -44,7 +44,7 @@ export async function fetchLeetCodeData(username) {
 
     const calendarInfo = yearsData.data.matchedUser.userCalendar;
     const activeYears = calendarInfo.activeYears || [new Date().getFullYear()];
-    const currentStreak = calendarInfo.streak || 0;
+    const apiStreak = calendarInfo.streak || 0;
 
     const calendarPromises = activeYears.map((year) => {
       const yearQuery = `
@@ -80,14 +80,22 @@ export async function fetchLeetCodeData(username) {
     const history = parseFullLeetCodeHistory(fullSubmissionMap);
     const latency = Math.round(performance.now() - startTime);
 
+    // Prefer our locally-computed streak. It's derived from the exact same
+    // calendar data that renders the 3D city, so the badge and the buildings
+    // can never disagree. LeetCode's own field is cached/inconsistent.
+    const computedStreak = computeCurrentStreak(history);
+    const finalStreak = history.length > 0 ? computedStreak : apiStreak;
+
     return {
-      currentStreak,
+      currentStreak: finalStreak,
       history,
       debug: {
         source: `LeetCode GraphQL (${activeYears.length} Years)`,
         latency: `${latency}ms`,
         rawEntriesCount: Object.keys(fullSubmissionMap).length,
         totalActiveDays: calendarInfo.totalActiveDays,
+        apiStreak,
+        computedStreak,
       },
     };
   } catch (err) {
@@ -110,16 +118,72 @@ async function fetchLeetCodeFallback(username, startTime) {
   const history = parseFullLeetCodeHistory(calendarRaw);
   const latency = Math.round(performance.now() - startTime);
 
+  const computedStreak = computeCurrentStreak(history);
+  const apiStreak = data.streak || 0;
+
   return {
-    currentStreak: data.streak || 0,
+    currentStreak: history.length > 0 ? computedStreak : apiStreak,
     history,
     debug: {
       source: "Alfa LeetCode Proxy",
       latency: `${latency}ms`,
       rawEntriesCount: Object.keys(calendarRaw).length,
       totalActiveDays: data.totalActiveDays || "N/A",
+      apiStreak,
+      computedStreak,
     },
   };
+}
+
+/**
+ * Computes the CURRENT streak by walking the chronological history
+ * backwards from today.
+ *
+ * Rules (matching LeetCode's UI semantics):
+ *  - If today has submissions, count backwards from today.
+ *  - If today has none but yesterday does, the streak is still "alive"
+ *    and counts backwards from yesterday.
+ *  - If both today and yesterday are empty, the streak is 0.
+ *
+ * Uses local date keys on both sides (history and `today`) so timezone
+ * shifts can't accidentally break a valid streak.
+ */
+function computeCurrentStreak(rawHistory) {
+  if (!rawHistory || rawHistory.length === 0) return 0;
+
+  const toKey = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  // Index history by date for O(1) lookups
+  const byDate = {};
+  rawHistory.forEach((d) => {
+    byDate[d.date] = d;
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Anchor: today if it has submissions, otherwise yesterday.
+  let anchor = new Date(today);
+  if (!byDate[toKey(anchor)]?.hasCoded) {
+    anchor.setDate(anchor.getDate() - 1);
+    if (!byDate[toKey(anchor)]?.hasCoded) return 0;
+  }
+
+  // Walk backwards counting consecutive coded days.
+  let streak = 0;
+  const cursor = new Date(anchor);
+  while (true) {
+    const entry = byDate[toKey(cursor)];
+    if (!entry || !entry.hasCoded) break;
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
 }
 
 /**

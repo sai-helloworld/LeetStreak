@@ -6,9 +6,33 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <!-- First-run welcome overlay (hidden once a username is saved) -->
+    <div id="welcomeOverlay" class="welcome-overlay" aria-hidden="true">
+      <div class="welcome-card">
+        <h3 class="welcome-title">WELCOME TO CYBER CITY</h3>
+        <p class="welcome-desc">
+          Enter your LeetCode username to generate your personalized 3D skyline.
+          Every submission becomes a tower, every streak lights up a district.
+        </p>
+        <div class="welcome-input-row">
+          <input
+            type="text"
+            id="welcomeUsernameInput"
+            placeholder="Your LeetCode username…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="welcomeStartBtn">BUILD MY CITY</button>
+        </div>
+        <p class="welcome-hint">
+          We only read your public submission calendar. No account, no login, no
+          tracking.
+        </p>
+      </div>
+    </div>
     <div class="extension-container">
       <header class="header">
-        <h2>⚡ LEETCODE CYBER CITY</h2>
+        <h2>LEETCODE CYBER CITY</h2>
 
         <!-- Username Fetch Bar -->
         <div class="user-input-container">
@@ -24,82 +48,216 @@
         <div class="streak-badge" id="currentStreakBadge">STREAK: 0 DAYS</div>
       </header>
 
-      <!-- Loading Overlay -->
-      <div id="loadingOverlay" class="loading-overlay">
-        <div class="spinner"></div>
-        <div class="loading-text">CONNECTING TO LEETCODE MATRIX...</div>
-      </div>
-
       <!-- 3D Calendar Viewport -->
       <div id="viewportContainer">
-        <canvas id="cyberCanvas" width="920" height="460"></canvas>
+        <canvas id="cyberCanvas"></canvas>
 
-        <!-- Hover Tooltip HUD -->
+        <!-- Info icon (top-left of the viewport) -->
+        <button
+          id="infoBtn"
+          class="info-btn"
+          title="What am I looking at?"
+          aria-label="Open legend"
+        >
+          i
+        </button>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay">
+          <div class="spinner"></div>
+          <div class="loading-text">CONNECTING TO LEETCODE MATRIX...</div>
+        </div>
+
+        <!-- Hover Tooltip HUD (follows cursor) -->
         <div id="hudCard" class="hud-card"></div>
-      </div>
 
-      <!-- Navigation Controls Directly Below Viewport -->
-      <div class="controls-panel-below">
-        <div class="panel-label">CAMERA & NAVIGATION CONTROLS</div>
-        <div class="dpad-container">
-          <button class="ctrl-btn" id="btnPanUp" title="Pan North (W / ▲)">
-            ▲
-          </button>
-          <div class="control-row">
-            <button class="ctrl-btn" id="btnPanLeft" title="Pan West (A / ◄)">
-              ◄
+        <!-- Floating Navigation D-pad (overlay inside viewport) -->
+        <div class="controls-overlay">
+          <div class="panel-label">CAMERA</div>
+          <div class="dpad-container">
+            <button class="ctrl-btn" id="btnPanUp" title="Pan North (W / ▲)">
+              ▲
             </button>
-            <button
-              class="ctrl-btn reset-btn"
-              id="btnPanReset"
-              title="Reset Camera View (R)"
-            >
-              RESET
-            </button>
-            <button class="ctrl-btn" id="btnPanRight" title="Pan East (D / ►)">
-              ►
+            <div class="control-row">
+              <button class="ctrl-btn" id="btnPanLeft" title="Pan West (A / ◄)">
+                ◄
+              </button>
+              <button
+                class="ctrl-btn reset-btn"
+                id="btnPanReset"
+                title="Reset Camera View (R)"
+              >
+                ⟲
+              </button>
+              <button
+                class="ctrl-btn"
+                id="btnPanRight"
+                title="Pan East (D / ►)"
+              >
+                ►
+              </button>
+            </div>
+            <button class="ctrl-btn" id="btnPanDown" title="Pan South (S / ▼)">
+              ▼
             </button>
           </div>
-          <button class="ctrl-btn" id="btnPanDown" title="Pan South (S / ▼)">
-            ▼
-          </button>
         </div>
-        <div class="help-hint">
-          <strong>Mouse Drag:</strong> Orbit Angle |
-          <strong>Scroll Wheel:</strong> Zoom In/Out |
-          <strong>WASD / Keys:</strong> Pan Matrix
+
+        <!-- Floating help hint (bottom-left) -->
+        <div class="help-overlay">
+          <strong>Drag:</strong> Orbit · <strong>Scroll:</strong> Zoom ·
+          <strong>WASD:</strong> Pan
+        </div>
+
+        <!-- Legend modal (hidden by default) -->
+        <div
+          id="legendModal"
+          class="legend-modal"
+          role="dialog"
+          aria-hidden="true"
+        >
+          <div class="legend-card">
+            <div class="legend-header">
+              <span class="legend-title">HOW TO READ THE CITY</span>
+              <button
+                id="legendClose"
+                class="legend-close"
+                aria-label="Close legend"
+              >
+                ×
+              </button>
+            </div>
+
+            <div class="legend-body">
+              <div class="legend-item">
+                <span class="legend-swatch swatch-tower"></span>
+                <div>
+                  <div class="legend-item-title">Each building = one day</div>
+                  <div class="legend-item-desc">
+                    Every block on the grid represents a single calendar day. If
+                    you made at least one submission that day, it becomes a
+                    glowing tower.
+                  </div>
+                </div>
+              </div>
+
+              <div class="legend-item">
+                <span class="legend-swatch swatch-floors"></span>
+                <div>
+                  <div class="legend-item-title">
+                    Floors = submissions that day
+                  </div>
+                  <div class="legend-item-desc">
+                    Every floor of a tower is one submission. Taller towers mean
+                    more problems solved that day (capped at 20 floors).
+                  </div>
+                </div>
+              </div>
+
+              <div class="legend-item">
+                <span class="legend-swatch swatch-streak"></span>
+                <div>
+                  <div class="legend-item-title">Same color = same streak</div>
+                  <div class="legend-item-desc">
+                    Consecutive coded days share a neon color, so a continuous
+                    streak reads as one glowing district. A new color starts
+                    when you miss a day and begin a new streak.
+                  </div>
+                </div>
+              </div>
+
+              <div class="legend-item">
+                <span class="legend-swatch swatch-platform"></span>
+                <div>
+                  <div class="legend-item-title">
+                    Platform height = streak length
+                  </div>
+                  <div class="legend-item-desc">
+                    Towers in a long streak sit on a taller platform. The longer
+                    the streak, the higher the platform — a subtle visual reward
+                    for consistency.
+                  </div>
+                </div>
+              </div>
+
+              <div class="legend-item">
+                <span class="legend-swatch swatch-empty"></span>
+                <div>
+                  <div class="legend-item-title">
+                    Empty plot = no submissions
+                  </div>
+                  <div class="legend-item-desc">
+                    A flat dark tile means you didn't submit that day. Gaps in
+                    your habit are visible at a glance.
+                  </div>
+                </div>
+              </div>
+
+              <div class="legend-item">
+                <span class="legend-swatch swatch-year"></span>
+                <div>
+                  <div class="legend-item-title">Columns = years</div>
+                  <div class="legend-item-desc">
+                    Each year is laid out as its own column, with months stacked
+                    front-to-back (January nearest, December furthest). Pink
+                    walls separate years.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="legend-footer">
+              <strong>Hover</strong> any tower for that day's details ·
+              <strong>Drag</strong> to orbit · <strong>Scroll</strong> to zoom ·
+              <strong>WASD</strong> to pan
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- NEW: API Data Verification & Debug Panel -->
-      <div class="debug-panel">
-        <div class="debug-header">
-          <span class="debug-title">📡 DATA FETCH MONITOR</span>
+      <!-- Analytics Panel -->
+      <div class="analytics-panel">
+        <div class="analytics-header">
+          <span class="analytics-title">CITY ANALYTICS</span>
           <span id="debugStatus" class="debug-status-tag status-idle"
             >STANDBY</span
           >
         </div>
-        <div class="debug-grid">
-          <div class="debug-metric">
-            <span class="metric-label">Target User:</span>
-            <span id="debugUsername" class="metric-val">--</span>
+        <div class="analytics-grid">
+          <div class="analytics-metric">
+            <span class="metric-label">Active Days</span>
+            <span id="statActiveDays" class="metric-val">--</span>
           </div>
-          <div class="debug-metric">
-            <span class="metric-label">API Endpoint:</span>
-            <span id="debugSource" class="metric-val">--</span>
+          <div class="analytics-metric">
+            <span class="metric-label">Total Submissions</span>
+            <span id="statTotalSubs" class="metric-val">--</span>
           </div>
-          <div class="debug-metric">
-            <span class="metric-label">Active Days (35d):</span>
-            <span id="debugActiveDays" class="metric-val">--</span>
+          <div class="analytics-metric">
+            <span class="metric-label">Current Streak</span>
+            <span id="statCurrentStreak" class="metric-val">--</span>
           </div>
-          <div class="debug-metric">
-            <span class="metric-label">Total Submissions:</span>
-            <span id="debugTotalSubs" class="metric-val">--</span>
+          <div class="analytics-metric">
+            <span class="metric-label">Longest Streak</span>
+            <span id="statLongestStreak" class="metric-val">--</span>
+          </div>
+          <div class="analytics-metric">
+            <span class="metric-label">Max / Day</span>
+            <span id="statMaxDay" class="metric-val">--</span>
+          </div>
+          <div class="analytics-metric">
+            <span class="metric-label">Longest Tower</span>
+            <span id="statLongestTower" class="metric-val">--</span>
+          </div>
+          <div class="analytics-metric">
+            <span class="metric-label">Total Streaks</span>
+            <span id="statTotalStreaks" class="metric-val">--</span>
+          </div>
+          <div class="analytics-metric">
+            <span class="metric-label">Avg / Active Day</span>
+            <span id="statAvgPerDay" class="metric-val">--</span>
           </div>
         </div>
-        <div id="debugLog" class="debug-log">
-          > Ready to verify connection...
-        </div>
+        <div id="analyticsLog" class="analytics-log">> Awaiting data…</div>
       </div>
     </div>
 

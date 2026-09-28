@@ -10,24 +10,35 @@ let targetCameraTarget = new THREE.Vector3(0, 0, 10);
 let isDragging = false;
 let previousMouse = { x: 0, y: 0 };
 
+// Raw client coords for accurate tooltip positioning
+let mouseClient = { x: 0, y: 0 };
+
 let cameraRotation = { x: Math.PI / 3.5, y: 0.0 };
-let cameraDistance = 120;
-let targetDistance = 120;
+let cameraDistance = 140;
+let targetDistance = 140;
 let targetRotation = { x: Math.PI / 3.5, y: 0.0 };
 
+// Computed in update3DForest and used to clamp camera movement.
+const CITY_BOUNDS = {
+  minX: -50,
+  maxX: 50,
+  minZ: -20,
+  maxZ: 200,
+};
+
 const MONTH_NAMES = [
-  "JAN",
-  "FEB",
-  "MAR",
-  "APR",
+  "JANUARY",
+  "FEBRUARY",
+  "MARCH",
+  "APRIL",
   "MAY",
-  "JUN",
-  "JUL",
-  "AUG",
-  "SEP",
-  "OCT",
-  "NOV",
-  "DEC",
+  "JUNE",
+  "JULY",
+  "AUGUST",
+  "SEPTEMBER",
+  "OCTOBER",
+  "NOVEMBER",
+  "DECEMBER",
 ];
 
 const PALETTE = {
@@ -41,19 +52,18 @@ export function init3DWorld(canvasElement) {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x060913);
 
-  camera = new THREE.PerspectiveCamera(
-    50,
-    canvasElement.width / canvasElement.height,
-    0.1,
-    3000,
-  );
+  // Read on-screen size (CSS-driven), fall back to attributes.
+  const initialW = canvasElement.clientWidth || canvasElement.width || 800;
+  const initialH = canvasElement.clientHeight || canvasElement.height || 400;
+
+  camera = new THREE.PerspectiveCamera(50, initialW / initialH, 0.1, 4000);
 
   renderer = new THREE.WebGLRenderer({
     canvas: canvasElement,
     antialias: true,
   });
-  renderer.setSize(canvasElement.width, canvasElement.height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(initialW, initialH, false); // false = leave CSS size alone
 
   raycaster = new THREE.Raycaster();
   mouse = new THREE.Vector2(-999, -999);
@@ -69,9 +79,34 @@ export function init3DWorld(canvasElement) {
   fillLight.position.set(-100, 60, -100);
   scene.add(fillLight);
 
-  const gridHelper = new THREE.GridHelper(500, 100, 0x00f3ff, 0x1e293b);
-  gridHelper.position.set(0, -0.1, 100);
-  scene.add(gridHelper);
+  // Floor grid — drawn manually so no X/Y axis lines appear.
+  (function buildFloorGrid() {
+    const GRID_SIZE = 600;
+    const GRID_DIVISIONS = 120;
+    const GRID_STEP = GRID_SIZE / GRID_DIVISIONS;
+    const half = GRID_SIZE / 2;
+
+    const gridMat = new THREE.LineBasicMaterial({
+      color: 0x00f3ff,
+      transparent: true,
+      opacity: 0.15,
+    });
+
+    const pts = [];
+    for (let i = 0; i <= GRID_DIVISIONS; i++) {
+      const x = -half + i * GRID_STEP;
+      pts.push(new THREE.Vector3(x, 0, -half), new THREE.Vector3(x, 0, half));
+    }
+    for (let i = 0; i <= GRID_DIVISIONS; i++) {
+      const z = -half + i * GRID_STEP;
+      pts.push(new THREE.Vector3(-half, 0, z), new THREE.Vector3(half, 0, z));
+    }
+
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const lines = new THREE.LineSegments(geo, gridMat);
+    lines.position.set(0, -0.1, 150);
+    scene.add(lines);
+  })();
 
   cityGroup = new THREE.Group();
   labelGroup = new THREE.Group();
@@ -79,6 +114,20 @@ export function init3DWorld(canvasElement) {
   scene.add(labelGroup);
 
   hoverHudEl = document.getElementById("hudCard");
+
+  // Keep renderer + camera in sync with the container's actual size.
+  const resize = () => {
+    const w = canvasElement.clientWidth;
+    const h = canvasElement.clientHeight;
+    if (w === 0 || h === 0) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  };
+  window.addEventListener("resize", resize);
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(resize).observe(canvasElement);
+  }
 
   setupControls(canvasElement);
   setupOnScreenControls();
@@ -107,13 +156,13 @@ export function init3DWorld(canvasElement) {
   animate();
 }
 
-function createTextSprite(textString, colorStr = "#00f3ff", isLarge = false) {
+function createTextSprite(textString, colorStr = "#ffe600", isLarge = false) {
   const canvas = document.createElement("canvas");
   canvas.width = isLarge ? 512 : 256;
   canvas.height = isLarge ? 128 : 96;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+  ctx.fillStyle = "rgb(0, 0, 1)";
   ctx.strokeStyle = colorStr;
   ctx.lineWidth = 4;
   ctx.beginPath();
@@ -135,7 +184,7 @@ function createTextSprite(textString, colorStr = "#00f3ff", isLarge = false) {
     transparent: true,
   });
   const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(isLarge ? 16 : 6, isLarge ? 4.0 : 2.2, 1);
+  sprite.scale.set(isLarge ? 22 : 9, isLarge ? 5.5 : 3.2, 1);
   return sprite;
 }
 
@@ -167,7 +216,7 @@ function createElevatedBuilding(dayData) {
   platMesh.position.y = platformHeight / 2;
   buildingGroup.add(platMesh);
 
-  // Platform Glowing Frame Edge
+  // Platform Edge Wireframe
   const platEdges = new THREE.EdgesGeometry(platGeo);
   const platLineMat = new THREE.LineBasicMaterial({
     color: streakColor,
@@ -177,12 +226,11 @@ function createElevatedBuilding(dayData) {
   platWire.position.y = platformHeight / 2;
   buildingGroup.add(platWire);
 
-  // 2. CHICAGO-STYLE SKYSCRAPER TOWER
+  // 2. CHICAGO SKYSCRAPER CORE
   const floorHeight = 1.2;
-  const numFloors = Math.max(1, Math.min(20, Math.floor(dayData.submissions)));
+  const numFloors = Math.max(1, Math.floor(dayData.submissions));
   const buildingHeight = numFloors * floorHeight;
 
-  // Concrete/Steel Core
   const coreGeo = new THREE.BoxGeometry(width, buildingHeight, depth);
   const coreMat = new THREE.MeshStandardMaterial({
     color: 0x080e1e,
@@ -204,7 +252,7 @@ function createElevatedBuilding(dayData) {
   };
   buildingGroup.add(coreMesh);
 
-  // 3. CHICAGO WINDOW GRID FACADES (3 Bays)
+  // 3. CHICAGO WINDOW BAYS (3 per face)
   const windowCols = 3;
   const windowWidth = (width - 0.6) / windowCols;
   const windowHeight = 0.65;
@@ -255,7 +303,7 @@ function createElevatedBuilding(dayData) {
       buildingGroup.add(leftWin);
     }
 
-    // Horizontal Spandrel Band
+    // Horizontal Spandrel Beams
     const spandrelGeo = new THREE.BoxGeometry(width + 0.08, 0.25, depth + 0.08);
     const spandrelMesh = new THREE.Mesh(spandrelGeo, frameMat);
     spandrelMesh.position.y = platformHeight + f * floorHeight + 0.1;
@@ -276,13 +324,13 @@ function createElevatedBuilding(dayData) {
     });
   });
 
-  // Roof Structure
+  // Roof Crown
   const roofGeo = new THREE.BoxGeometry(width + 0.2, 0.3, depth + 0.2);
   const roofMesh = new THREE.Mesh(roofGeo, frameMat);
   roofMesh.position.y = platformHeight + buildingHeight + 0.15;
   buildingGroup.add(roofMesh);
 
-  // Spire / Antenna
+  // Antenna Spire
   if (numFloors >= 5) {
     const spireGeo = new THREE.CylinderGeometry(0.04, 0.15, 2.5, 8);
     const spireMat = new THREE.MeshBasicMaterial({ color: streakColor });
@@ -336,7 +384,7 @@ function createColonyDivider(width = 38) {
   return dividerGroup;
 }
 
-function createYearBoundaryWall(height = 120) {
+function createYearBoundaryWall(height = 300) {
   const wallGroup = new THREE.Group();
   const geo = new THREE.BoxGeometry(1.5, 0.2, height);
   const mat = new THREE.MeshBasicMaterial({ color: PALETTE.yearDivider });
@@ -347,9 +395,8 @@ function createYearBoundaryWall(height = 120) {
 }
 
 /**
- * 2-AXIS MATRIX GENERATION:
- * - X-Axis: Years placed side-by-side (Year Columns)
- * - Z-Axis: Month Colonies flowing vertically inside each year column
+ * 2-AXIS MATRIX GENERATION (Jan - Dec Full Year Render):
+ * Ensures all 12 months (Jan-Dec) are rendered in each year column side-by-side.
  */
 export function update3DForest(currentStreak, calendarHistory = []) {
   if (!cityGroup) return;
@@ -361,54 +408,37 @@ export function update3DForest(currentStreak, calendarHistory = []) {
   const CELL_SPACING_X = 5.2;
   const CELL_SPACING_Z = 5.2;
   const MONTH_COLONY_GAP = 6.0;
-  const YEAR_COLUMN_WIDTH = 7 * CELL_SPACING_X + 12.0; // Width of 1 year column
+  const YEAR_COLUMN_WIDTH = 7 * CELL_SPACING_X + 14.0;
 
   if (!calendarHistory || calendarHistory.length === 0) return;
 
-  // Group Days by Year -> Month Colonies
-  const yearGroupsMap = {};
+  // 1. Build Quick Lookup Map for raw history
+  const historyLookup = {};
+  const activeYearsSet = new Set();
 
   calendarHistory.forEach((dayData) => {
-    const yr = dayData.year;
-    if (!yearGroupsMap[yr]) {
-      yearGroupsMap[yr] = {
-        year: yr,
-        monthColonies: {},
-      };
-    }
-
-    const mo = dayData.month;
-    if (!yearGroupsMap[yr].monthColonies[mo]) {
-      yearGroupsMap[yr].monthColonies[mo] = {
-        month: mo,
-        monthName: MONTH_NAMES[mo],
-        days: [],
-      };
-    }
-
-    yearGroupsMap[yr].monthColonies[mo].days.push(dayData);
+    historyLookup[dayData.date] = dayData;
+    activeYearsSet.add(dayData.year);
   });
 
-  const sortedYears = Object.keys(yearGroupsMap)
-    .map(Number)
-    .sort((a, b) => a - b);
+  const sortedYears = Array.from(activeYearsSet).sort((a, b) => a - b);
   const totalYears = sortedYears.length;
 
   let maxDepthZ = 0;
 
+  // 2. Iterate through each year column side-by-side
   sortedYears.forEach((year, yearIndex) => {
-    // Calculate X center offset for this year column
     const yearCenterX = (yearIndex - (totalYears - 1) / 2) * YEAR_COLUMN_WIDTH;
 
-    // 1. Render Big Year Title Banner
+    // Year Title Banner
     const yearBanner = createTextSprite(`YEAR ${year}`, "#ff0055", true);
     yearBanner.position.set(yearCenterX, 8.0, -10.0);
     labelGroup.add(yearBanner);
 
-    // Render Day-of-Week Headers above each year column
+    // Day of week headers above column
     const daysOfWeek = ["S", "M", "T", "W", "T", "F", "S"];
     daysOfWeek.forEach((dayLabel, colIndex) => {
-      const sprite = createTextSprite(dayLabel, "#00f3ff");
+      const sprite = createTextSprite(dayLabel, "#ffea00");
       sprite.position.set(
         yearCenterX + (colIndex * CELL_SPACING_X - 15.6),
         1.0,
@@ -419,48 +449,50 @@ export function update3DForest(currentStreak, calendarHistory = []) {
 
     let currentZ = 0;
 
-    const yearData = yearGroupsMap[year];
-    const sortedMonths = Object.keys(yearData.monthColonies)
-      .map(Number)
-      .sort((a, b) => a - b);
-
-    sortedMonths.forEach((month) => {
-      const colony = yearData.monthColonies[month];
+    // 3. FORCE FULL 12 MONTHS (Jan = 0 to Dec = 11)
+    for (let month = 0; month < 12; month++) {
+      const monthName = MONTH_NAMES[month];
 
       // Month Title Tag
-      const monthHeader = createTextSprite(
-        `${colony.monthName}`,
-        "#38bdf8",
-        false,
-      );
+      const monthHeader = createTextSprite(`${monthName}`, "#f2f838", false);
       monthHeader.position.set(yearCenterX, 4.0, currentZ);
       labelGroup.add(monthHeader);
 
       currentZ += 3.5;
 
+      // Generate all days for this month
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
       let currentRow = 0;
 
-      colony.days.forEach((dayData) => {
-        const colIndex = dayData.dayOfWeek;
-        const xPos = yearCenterX + (colIndex * CELL_SPACING_X - 15.6);
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(year, month, d);
+        const yStr = dateObj.getFullYear();
+        const mStr = String(dateObj.getMonth() + 1).padStart(2, "0");
+        const dStr = String(dateObj.getDate()).padStart(2, "0");
+        const dateKey = `${yStr}-${mStr}-${dStr}`;
+
+        const dayOfWeek = dateObj.getDay();
+        const existingData = historyLookup[dateKey];
+
+        const xPos = yearCenterX + (dayOfWeek * CELL_SPACING_X - 15.6);
         const zPos = currentZ + currentRow * CELL_SPACING_Z;
 
-        if (dayData.hasCoded) {
-          const building = createElevatedBuilding(dayData);
+        if (existingData && existingData.hasCoded) {
+          const building = createElevatedBuilding(existingData);
           building.position.set(xPos, 0, zPos);
           cityGroup.add(building);
         } else {
-          const emptyPlot = createEmptyPlot(dayData.date);
+          const emptyPlot = createEmptyPlot(dateKey);
           emptyPlot.position.set(xPos, 0, zPos);
           cityGroup.add(emptyPlot);
         }
 
-        if (colIndex === 6) {
+        if (dayOfWeek === 6 || d === daysInMonth) {
           currentRow++;
         }
-      });
+      }
 
-      const colonyDepth = (currentRow + 1) * CELL_SPACING_Z;
+      const colonyDepth = currentRow * CELL_SPACING_Z;
       currentZ += colonyDepth;
 
       // Road divider between months
@@ -469,21 +501,45 @@ export function update3DForest(currentStreak, calendarHistory = []) {
       cityGroup.add(road);
 
       currentZ += MONTH_COLONY_GAP;
-    });
+    }
 
     if (currentZ > maxDepthZ) maxDepthZ = currentZ;
 
-    // Vertical Cyber Divider Wall between Year Columns
+    // Neon Boundary Wall between adjacent years
     if (yearIndex < totalYears - 1) {
       const dividerX = yearCenterX + YEAR_COLUMN_WIDTH / 2;
-      const yearWall = createYearBoundaryWall(maxDepthZ || 150);
+      const yearWall = createYearBoundaryWall(maxDepthZ || 350);
       yearWall.position.set(dividerX, 0, 0);
       cityGroup.add(yearWall);
     }
   });
 
-  // Center camera across the 2-axis matrix
+  // Adjust camera focal target to middle of matrix
   targetCameraTarget.set(0, 0, maxDepthZ / 2);
+
+  // Record the city extents so we can clamp panning.
+  const totalWidthX = totalYears * YEAR_COLUMN_WIDTH;
+  CITY_BOUNDS.minX = -totalWidthX / 2 - 10;
+  CITY_BOUNDS.maxX = totalWidthX / 2 + 10;
+  CITY_BOUNDS.minZ = -30;
+  CITY_BOUNDS.maxZ = maxDepthZ + 30;
+}
+
+/**
+ * Clamps the pan target to the city's extents plus a small margin.
+ * Called after every input that can move the camera target.
+ */
+function clampTarget() {
+  const margin = 10;
+  targetCameraTarget.x = Math.max(
+    CITY_BOUNDS.minX - margin,
+    Math.min(CITY_BOUNDS.maxX + margin, targetCameraTarget.x),
+  );
+  targetCameraTarget.z = Math.max(
+    CITY_BOUNDS.minZ - margin,
+    Math.min(CITY_BOUNDS.maxZ + margin, targetCameraTarget.z),
+  );
+  targetCameraTarget.y = 0;
 }
 
 function setupControls(canvas) {
@@ -494,8 +550,11 @@ function setupControls(canvas) {
 
   canvas.addEventListener("mousemove", (e) => {
     const rect = canvas.getBoundingClientRect();
-    mouse.x = ((e.clientX - rect.left) / canvas.width) * 2 - 1;
-    mouse.y = -((e.clientY - rect.top) / canvas.height) * 2 + 1;
+    mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    mouseClient.x = e.clientX;
+    mouseClient.y = e.clientY;
 
     if (!isDragging) return;
 
@@ -519,76 +578,144 @@ function setupControls(canvas) {
     e.preventDefault();
     targetDistance = Math.max(
       20,
-      Math.min(800, targetDistance + e.deltaY * 0.2),
+      Math.min(1000, targetDistance + e.deltaY * 0.25),
     );
   });
 
   window.addEventListener("keydown", (e) => {
-    const speed = 12;
-    if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft")
+    const speed = 14;
+    let moved = false;
+
+    if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") {
       targetCameraTarget.x -= speed;
-    if (e.key === "d" || e.key === "D" || e.key === "ArrowRight")
+      moved = true;
+    }
+    if (e.key === "d" || e.key === "D" || e.key === "ArrowRight") {
       targetCameraTarget.x += speed;
-    if (e.key === "w" || e.key === "W" || e.key === "ArrowUp")
+      moved = true;
+    }
+    if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") {
       targetCameraTarget.z -= speed;
-    if (e.key === "s" || e.key === "S" || e.key === "ArrowDown")
+      moved = true;
+    }
+    if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") {
       targetCameraTarget.z += speed;
+      moved = true;
+    }
     if (e.key === "r" || e.key === "R") {
       targetCameraTarget.set(0, 0, 10);
       targetRotation = { x: Math.PI / 3.5, y: 0.0 };
-      targetDistance = 120;
+      targetDistance = 140;
+      moved = false;
     }
+
+    if (moved) clampTarget();
   });
 }
 
 function setupOnScreenControls() {
-  const speed = 14;
+  const speed = 16;
+  const pan = (dx, dz) => {
+    targetCameraTarget.x += dx;
+    targetCameraTarget.z += dz;
+    clampTarget();
+  };
+
   document
     .getElementById("btnPanLeft")
-    ?.addEventListener("click", () => (targetCameraTarget.x -= speed));
+    ?.addEventListener("click", () => pan(-speed, 0));
   document
     .getElementById("btnPanRight")
-    ?.addEventListener("click", () => (targetCameraTarget.x += speed));
+    ?.addEventListener("click", () => pan(speed, 0));
   document
     .getElementById("btnPanUp")
-    ?.addEventListener("click", () => (targetCameraTarget.z -= speed));
+    ?.addEventListener("click", () => pan(0, -speed));
   document
     .getElementById("btnPanDown")
-    ?.addEventListener("click", () => (targetCameraTarget.z += speed));
+    ?.addEventListener("click", () => pan(0, speed));
   document.getElementById("btnPanReset")?.addEventListener("click", () => {
     targetCameraTarget.set(0, 0, 10);
     targetRotation = { x: Math.PI / 3.5, y: 0.0 };
-    targetDistance = 120;
+    targetDistance = 140;
   });
+}
+
+/**
+ * Walks up the parent chain to find the nearest selectable ancestor.
+ */
+function findSelectableAncestor(obj) {
+  let cur = obj;
+  while (cur) {
+    if (cur.userData && cur.userData.isSelectable) return cur;
+    cur = cur.parent;
+  }
+  return null;
 }
 
 function checkHover() {
   if (!raycaster || !cityGroup || !hoverHudEl) return;
 
   raycaster.setFromCamera(mouse, camera);
+
   const intersects = raycaster.intersectObjects(cityGroup.children, true);
 
-  const hit = intersects.find((item) => item.object.userData?.isSelectable);
-
-  if (hit) {
-    const data = hit.object.userData;
-    hoverHudEl.style.display = "block";
-
-    if (data.type === "Building") {
-      hoverHudEl.innerHTML = `
-        <div style="color:#00f3ff; margin-bottom:4px;">🏢 <strong>Streak Block #${data.streakId}</strong></div>
-        <div><strong>Date:</strong> ${data.date}</div>
-        <div><strong>Total Streak Length:</strong> ${data.totalStreakLength} Days</div>
-        <div><strong>Platform Height:</strong> +${data.platformHeight}m</div>
-        <div><strong>Daily Submissions:</strong> ${data.submissions}</div>
-      `;
-    } else {
-      hoverHudEl.innerHTML = `
-        <div style="color:#94a3b8; margin-bottom:4px;">🚫 <strong>Inactive Plot</strong></div>
-        <div><strong>Date:</strong> ${data.date}</div>
-      `;
-    }
-  } else {
-    hoverHudEl.style.display = "none";
+  // Pick the nearest intersection that resolves to a selectable object.
+  let selected = null;
+  const seen = new Set();
+  for (const hit of intersects) {
+    const sel = findSelectableAncestor(hit.object);
+    if (!sel) continue;
+    if (seen.has(sel)) continue;
+    seen.add(sel);
+    selected = sel;
+    break;
   }
+
+  if (!selected) {
+    hoverHudEl.style.display = "none";
+    return;
+  }
+
+  const data = selected.userData || {};
+  const container = hoverHudEl.parentElement; // #viewportContainer
+  const cRect = container.getBoundingClientRect();
+
+  let html = "";
+  if (data.type === "Building") {
+    html = `
+      <div style="color:#00f3ff; margin-bottom:4px;">🏢 <strong>Streak Block #${data.streakId ?? "-"}</strong></div>
+      <div class="hud-row"><span class="hud-label">Date:</span><span class="hud-val">${data.date ?? "-"}</span></div>
+      <div class="hud-row"><span class="hud-label">Submissions:</span><span class="hud-val">${data.submissions ?? 0}</span></div>
+      <div class="hud-row"><span class="hud-label">Floors:</span><span class="hud-val">${data.floors ?? 0}</span></div>
+      <div class="hud-row"><span class="hud-label">Streak Length:</span><span class="hud-val">${data.totalStreakLength ?? 0} d</span></div>
+      <div class="hud-row"><span class="hud-label">Platform:</span><span class="hud-val">+${data.platformHeight ?? 0}m</span></div>
+    `;
+  } else {
+    html = `
+      <div style="color:#94a3b8; margin-bottom:4px;">🚫 <strong>Inactive Plot</strong></div>
+      <div class="hud-row"><span class="hud-label">Date:</span><span class="hud-val">${data.date ?? "-"}</span></div>
+    `;
+  }
+
+  hoverHudEl.innerHTML = html;
+  hoverHudEl.style.display = "block";
+
+  // Position next to cursor, clamped inside the viewport
+  const pad = 14;
+  const hudW = hoverHudEl.offsetWidth;
+  const hudH = hoverHudEl.offsetHeight;
+
+  let x = mouseClient.x - cRect.left + 16;
+  let y = mouseClient.y - cRect.top + 16;
+
+  if (x + hudW + pad > cRect.width) {
+    x = mouseClient.x - cRect.left - hudW - 16;
+  }
+  if (y + hudH + pad > cRect.height) {
+    y = mouseClient.y - cRect.top - hudH - 16;
+  }
+  if (x < pad) x = pad;
+  if (y < pad) y = pad;
+
+  hoverHudEl.style.transform = `translate(${x}px, ${y}px)`;
 }

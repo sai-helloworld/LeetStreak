@@ -1,13 +1,24 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 1,
   "name": "LeetCode Cyber City Calendar",
-  "version": "2.1.0",
+  "version": "1.0.0",
   "description": "3D Calendar Matrix showing LeetCode submission streaks as cyber skyscrapers, roads, and empty plots.",
   "action": {
     "default_popup": "popup.html",
-    "default_width": 960,
-    "default_height": 720
+    "default_width": 1060,
+    "default_height": 720,
+    "default_icon": {
+      "16": "assets/icon.png",
+      "48": "assets/icon.png",
+      "128": "assets/icon.png"
+    }
   },
+  "icons": {
+    "16": "assets/icon.png",
+    "48": "assets/icon.png",
+    "128": "assets/icon.png"
+  },
+
   "permissions": ["storage"],
   "host_permissions": [
     "https://leetcode.com/*",
