@@ -11,29 +11,30 @@ let isDragging = false;
 let previousMouse = { x: 0, y: 0 };
 
 let cameraRotation = { x: Math.PI / 3.5, y: 0.0 };
-let cameraDistance = 90;
-let targetDistance = 90;
+let cameraDistance = 120;
+let targetDistance = 120;
 let targetRotation = { x: Math.PI / 3.5, y: 0.0 };
 
 const MONTH_NAMES = [
-  "JANUARY",
-  "FEBRUARY",
-  "MARCH",
-  "APRIL",
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
   "MAY",
-  "JUNE",
-  "JULY",
-  "AUGUST",
-  "SEPTEMBER",
-  "OCTOBER",
-  "NOVEMBER",
-  "DECEMBER",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
 ];
 
 const PALETTE = {
   emptyPlot: 0x1e293b,
   emptyPlotBorder: 0x334155,
   colonyRoad: 0x00f3ff,
+  yearDivider: 0xff0055,
 };
 
 export function init3DWorld(canvasElement) {
@@ -44,7 +45,7 @@ export function init3DWorld(canvasElement) {
     50,
     canvasElement.width / canvasElement.height,
     0.1,
-    2000,
+    3000,
   );
 
   renderer = new THREE.WebGLRenderer({
@@ -61,14 +62,14 @@ export function init3DWorld(canvasElement) {
   scene.add(ambientLight);
 
   const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
-  dirLight.position.set(60, 150, 60);
+  dirLight.position.set(100, 200, 100);
   scene.add(dirLight);
 
   const fillLight = new THREE.DirectionalLight(0x00f3ff, 1.2);
-  fillLight.position.set(-60, 60, -60);
+  fillLight.position.set(-100, 60, -100);
   scene.add(fillLight);
 
-  const gridHelper = new THREE.GridHelper(300, 60, 0x00f3ff, 0x1e293b);
+  const gridHelper = new THREE.GridHelper(500, 100, 0x00f3ff, 0x1e293b);
   gridHelper.position.set(0, -0.1, 100);
   scene.add(gridHelper);
 
@@ -123,7 +124,7 @@ function createTextSprite(textString, colorStr = "#00f3ff", isLarge = false) {
   ctx.stroke();
 
   ctx.fillStyle = colorStr;
-  ctx.font = isLarge ? "Bold 42px monospace" : "Bold 32px monospace";
+  ctx.font = isLarge ? "Bold 48px monospace" : "Bold 32px monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(textString, canvas.width / 2, canvas.height / 2);
@@ -134,13 +135,10 @@ function createTextSprite(textString, colorStr = "#00f3ff", isLarge = false) {
     transparent: true,
   });
   const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(isLarge ? 14 : 6, isLarge ? 3.5 : 2.2, 1);
+  sprite.scale.set(isLarge ? 16 : 6, isLarge ? 4.0 : 2.2, 1);
   return sprite;
 }
 
-/**
- * Creates a Streak Building placed on top of an elevated platform whose height reflects total streak size
- */
 /**
  * Creates a Chicago-style skyscraper placed on top of an elevated streak platform
  */
@@ -184,7 +182,7 @@ function createElevatedBuilding(dayData) {
   const numFloors = Math.max(1, Math.min(20, Math.floor(dayData.submissions)));
   const buildingHeight = numFloors * floorHeight;
 
-  // Dark Architectural Concrete/Steel Core Structure
+  // Concrete/Steel Core
   const coreGeo = new THREE.BoxGeometry(width, buildingHeight, depth);
   const coreMat = new THREE.MeshStandardMaterial({
     color: 0x080e1e,
@@ -206,13 +204,12 @@ function createElevatedBuilding(dayData) {
   };
   buildingGroup.add(coreMesh);
 
-  // 3. CHICAGO WINDOW GRID FACADES (North, South, East, West)
-  const windowCols = 3; // 3 Chicago-style wide window bays per face
+  // 3. CHICAGO WINDOW GRID FACADES (3 Bays)
+  const windowCols = 3;
   const windowWidth = (width - 0.6) / windowCols;
   const windowHeight = 0.65;
-  const windowDepthOffset = width / 2 + 0.02; // Slightly offset outside core wall
+  const windowDepthOffset = width / 2 + 0.02;
 
-  // Window Panes Material (Cyberpunk Lit Glass)
   const windowMat = new THREE.MeshStandardMaterial({
     color: streakColor,
     emissive: streakColor,
@@ -221,55 +218,51 @@ function createElevatedBuilding(dayData) {
     metalness: 0.9,
   });
 
-  // Dark Steel Frame/Mullion Material
   const frameMat = new THREE.MeshStandardMaterial({
     color: 0x1e293b,
     roughness: 0.5,
     metalness: 0.8,
   });
 
-  // Build Chicago window bays across all floors
   for (let f = 0; f < numFloors; f++) {
     const floorY = platformHeight + f * floorHeight + floorHeight / 2;
 
     for (let col = 0; col < windowCols; col++) {
       const offsetX = -((width - 0.8) / 2) + col * (windowWidth + 0.15);
-
-      // Create window panes for 4 exterior sides
       const windowGeo = new THREE.PlaneGeometry(windowWidth, windowHeight);
 
-      // Front Face (+Z)
+      // Front (+Z)
       const frontWin = new THREE.Mesh(windowGeo, windowMat);
       frontWin.position.set(offsetX, floorY, windowDepthOffset);
       buildingGroup.add(frontWin);
 
-      // Back Face (-Z)
+      // Back (-Z)
       const backWin = new THREE.Mesh(windowGeo, windowMat);
       backWin.position.set(offsetX, floorY, -windowDepthOffset);
       backWin.rotation.y = Math.PI;
       buildingGroup.add(backWin);
 
-      // Right Face (+X)
+      // Right (+X)
       const rightWin = new THREE.Mesh(windowGeo, windowMat);
       rightWin.position.set(windowDepthOffset, floorY, offsetX);
       rightWin.rotation.y = Math.PI / 2;
       buildingGroup.add(rightWin);
 
-      // Left Face (-X)
+      // Left (-X)
       const leftWin = new THREE.Mesh(windowGeo, windowMat);
       leftWin.position.set(-windowDepthOffset, floorY, offsetX);
       leftWin.rotation.y = -Math.PI / 2;
       buildingGroup.add(leftWin);
     }
 
-    // Chicago architectural Spandrel Band (horizontal steel line between floor windows)
+    // Horizontal Spandrel Band
     const spandrelGeo = new THREE.BoxGeometry(width + 0.08, 0.25, depth + 0.08);
     const spandrelMesh = new THREE.Mesh(spandrelGeo, frameMat);
     spandrelMesh.position.y = platformHeight + f * floorHeight + 0.1;
     buildingGroup.add(spandrelMesh);
   }
 
-  // Vertical Architectural Mullions / Columns
+  // Vertical Mullions
   const verticalColumnGeo = new THREE.BoxGeometry(0.12, buildingHeight, 0.12);
   const colPositions = [-width / 2, -width / 6, width / 6, width / 2];
 
@@ -283,13 +276,13 @@ function createElevatedBuilding(dayData) {
     });
   });
 
-  // 4. ROOF CROWN & ANTENNA (Classic Skyscraper Top)
+  // Roof Structure
   const roofGeo = new THREE.BoxGeometry(width + 0.2, 0.3, depth + 0.2);
   const roofMesh = new THREE.Mesh(roofGeo, frameMat);
   roofMesh.position.y = platformHeight + buildingHeight + 0.15;
   buildingGroup.add(roofMesh);
 
-  // Spire / Antenna on taller streak skyscrapers (>= 5 floors)
+  // Spire / Antenna
   if (numFloors >= 5) {
     const spireGeo = new THREE.CylinderGeometry(0.04, 0.15, 2.5, 8);
     const spireMat = new THREE.MeshBasicMaterial({ color: streakColor });
@@ -333,9 +326,9 @@ function createEmptyPlot(dateStr = "") {
   return plotGroup;
 }
 
-function createColonyDivider() {
+function createColonyDivider(width = 38) {
   const dividerGroup = new THREE.Group();
-  const geo = new THREE.BoxGeometry(36, 0.1, 1.6);
+  const geo = new THREE.BoxGeometry(width, 0.1, 1.2);
   const mat = new THREE.MeshBasicMaterial({ color: PALETTE.colonyRoad });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(0, 0.05, 0);
@@ -343,6 +336,21 @@ function createColonyDivider() {
   return dividerGroup;
 }
 
+function createYearBoundaryWall(height = 120) {
+  const wallGroup = new THREE.Group();
+  const geo = new THREE.BoxGeometry(1.5, 0.2, height);
+  const mat = new THREE.MeshBasicMaterial({ color: PALETTE.yearDivider });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(0, 0.1, height / 2);
+  wallGroup.add(mesh);
+  return wallGroup;
+}
+
+/**
+ * 2-AXIS MATRIX GENERATION:
+ * - X-Axis: Years placed side-by-side (Year Columns)
+ * - Z-Axis: Month Colonies flowing vertically inside each year column
+ */
 export function update3DForest(currentStreak, calendarHistory = []) {
   if (!cityGroup) return;
 
@@ -352,85 +360,130 @@ export function update3DForest(currentStreak, calendarHistory = []) {
 
   const CELL_SPACING_X = 5.2;
   const CELL_SPACING_Z = 5.2;
-  const MONTH_COLONY_GAP = 7.0; // Distance between month colonies
+  const MONTH_COLONY_GAP = 6.0;
+  const YEAR_COLUMN_WIDTH = 7 * CELL_SPACING_X + 12.0; // Width of 1 year column
 
   if (!calendarHistory || calendarHistory.length === 0) return;
 
-  // Render Day-of-Week Header Labels
-  const daysOfWeek = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-  daysOfWeek.forEach((dayLabel, colIndex) => {
-    const sprite = createTextSprite(dayLabel, "#00f3ff");
-    sprite.position.set(colIndex * CELL_SPACING_X - 15.6, 1.0, -6.0);
-    labelGroup.add(sprite);
-  });
-
-  // Group Days into Month Colonies
-  const monthColonies = [];
-  let currentMonthGroup = null;
+  // Group Days by Year -> Month Colonies
+  const yearGroupsMap = {};
 
   calendarHistory.forEach((dayData) => {
-    const colonyKey = `${dayData.year}-${dayData.month}`;
-    if (!currentMonthGroup || currentMonthGroup.colonyKey !== colonyKey) {
-      currentMonthGroup = {
-        colonyKey,
-        year: dayData.year,
-        monthName: MONTH_NAMES[dayData.month],
+    const yr = dayData.year;
+    if (!yearGroupsMap[yr]) {
+      yearGroupsMap[yr] = {
+        year: yr,
+        monthColonies: {},
+      };
+    }
+
+    const mo = dayData.month;
+    if (!yearGroupsMap[yr].monthColonies[mo]) {
+      yearGroupsMap[yr].monthColonies[mo] = {
+        month: mo,
+        monthName: MONTH_NAMES[mo],
         days: [],
       };
-      monthColonies.push(currentMonthGroup);
     }
-    currentMonthGroup.days.push(dayData);
+
+    yearGroupsMap[yr].monthColonies[mo].days.push(dayData);
   });
 
-  let currentZ = 0;
+  const sortedYears = Object.keys(yearGroupsMap)
+    .map(Number)
+    .sort((a, b) => a - b);
+  const totalYears = sortedYears.length;
 
-  monthColonies.forEach((colony) => {
-    // 1. Render Month Colony Banner Label
-    const monthHeader = createTextSprite(
-      `${colony.monthName} ${colony.year}`,
-      "#38bdf8",
-      true,
-    );
-    monthHeader.position.set(0, 5.0, currentZ);
-    labelGroup.add(monthHeader);
+  let maxDepthZ = 0;
 
-    currentZ += 4.0;
+  sortedYears.forEach((year, yearIndex) => {
+    // Calculate X center offset for this year column
+    const yearCenterX = (yearIndex - (totalYears - 1) / 2) * YEAR_COLUMN_WIDTH;
 
-    let currentRow = 0;
+    // 1. Render Big Year Title Banner
+    const yearBanner = createTextSprite(`YEAR ${year}`, "#ff0055", true);
+    yearBanner.position.set(yearCenterX, 8.0, -10.0);
+    labelGroup.add(yearBanner);
 
-    // Render calendar days inside this month colony
-    colony.days.forEach((dayData) => {
-      const colIndex = dayData.dayOfWeek;
-      const xPos = colIndex * CELL_SPACING_X - 15.6;
-      const zPos = currentZ + currentRow * CELL_SPACING_Z;
-
-      if (dayData.hasCoded) {
-        const building = createElevatedBuilding(dayData);
-        building.position.set(xPos, 0, zPos);
-        cityGroup.add(building);
-      } else {
-        const emptyPlot = createEmptyPlot(dayData.date);
-        emptyPlot.position.set(xPos, 0, zPos);
-        cityGroup.add(emptyPlot);
-      }
-
-      if (colIndex === 6) {
-        currentRow++;
-      }
+    // Render Day-of-Week Headers above each year column
+    const daysOfWeek = ["S", "M", "T", "W", "T", "F", "S"];
+    daysOfWeek.forEach((dayLabel, colIndex) => {
+      const sprite = createTextSprite(dayLabel, "#00f3ff");
+      sprite.position.set(
+        yearCenterX + (colIndex * CELL_SPACING_X - 15.6),
+        1.0,
+        -4.0,
+      );
+      labelGroup.add(sprite);
     });
 
-    const colonyDepth = (currentRow + 1) * CELL_SPACING_Z;
-    currentZ += colonyDepth;
+    let currentZ = 0;
 
-    // Colony Road Divider between months
-    const road = createColonyDivider();
-    road.position.set(0, 0, currentZ + MONTH_COLONY_GAP / 2);
-    cityGroup.add(road);
+    const yearData = yearGroupsMap[year];
+    const sortedMonths = Object.keys(yearData.monthColonies)
+      .map(Number)
+      .sort((a, b) => a - b);
 
-    currentZ += MONTH_COLONY_GAP;
+    sortedMonths.forEach((month) => {
+      const colony = yearData.monthColonies[month];
+
+      // Month Title Tag
+      const monthHeader = createTextSprite(
+        `${colony.monthName}`,
+        "#38bdf8",
+        false,
+      );
+      monthHeader.position.set(yearCenterX, 4.0, currentZ);
+      labelGroup.add(monthHeader);
+
+      currentZ += 3.5;
+
+      let currentRow = 0;
+
+      colony.days.forEach((dayData) => {
+        const colIndex = dayData.dayOfWeek;
+        const xPos = yearCenterX + (colIndex * CELL_SPACING_X - 15.6);
+        const zPos = currentZ + currentRow * CELL_SPACING_Z;
+
+        if (dayData.hasCoded) {
+          const building = createElevatedBuilding(dayData);
+          building.position.set(xPos, 0, zPos);
+          cityGroup.add(building);
+        } else {
+          const emptyPlot = createEmptyPlot(dayData.date);
+          emptyPlot.position.set(xPos, 0, zPos);
+          cityGroup.add(emptyPlot);
+        }
+
+        if (colIndex === 6) {
+          currentRow++;
+        }
+      });
+
+      const colonyDepth = (currentRow + 1) * CELL_SPACING_Z;
+      currentZ += colonyDepth;
+
+      // Road divider between months
+      const road = createColonyDivider(38);
+      road.position.set(yearCenterX, 0, currentZ + MONTH_COLONY_GAP / 2);
+      cityGroup.add(road);
+
+      currentZ += MONTH_COLONY_GAP;
+    });
+
+    if (currentZ > maxDepthZ) maxDepthZ = currentZ;
+
+    // Vertical Cyber Divider Wall between Year Columns
+    if (yearIndex < totalYears - 1) {
+      const dividerX = yearCenterX + YEAR_COLUMN_WIDTH / 2;
+      const yearWall = createYearBoundaryWall(maxDepthZ || 150);
+      yearWall.position.set(dividerX, 0, 0);
+      cityGroup.add(yearWall);
+    }
   });
 
-  targetCameraTarget.set(0, 0, currentZ / 2);
+  // Center camera across the 2-axis matrix
+  targetCameraTarget.set(0, 0, maxDepthZ / 2);
 }
 
 function setupControls(canvas) {
@@ -466,12 +519,12 @@ function setupControls(canvas) {
     e.preventDefault();
     targetDistance = Math.max(
       20,
-      Math.min(600, targetDistance + e.deltaY * 0.15),
+      Math.min(800, targetDistance + e.deltaY * 0.2),
     );
   });
 
   window.addEventListener("keydown", (e) => {
-    const speed = 10;
+    const speed = 12;
     if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft")
       targetCameraTarget.x -= speed;
     if (e.key === "d" || e.key === "D" || e.key === "ArrowRight")
@@ -483,13 +536,13 @@ function setupControls(canvas) {
     if (e.key === "r" || e.key === "R") {
       targetCameraTarget.set(0, 0, 10);
       targetRotation = { x: Math.PI / 3.5, y: 0.0 };
-      targetDistance = 90;
+      targetDistance = 120;
     }
   });
 }
 
 function setupOnScreenControls() {
-  const speed = 12;
+  const speed = 14;
   document
     .getElementById("btnPanLeft")
     ?.addEventListener("click", () => (targetCameraTarget.x -= speed));
@@ -505,7 +558,7 @@ function setupOnScreenControls() {
   document.getElementById("btnPanReset")?.addEventListener("click", () => {
     targetCameraTarget.set(0, 0, 10);
     targetRotation = { x: Math.PI / 3.5, y: 0.0 };
-    targetDistance = 90;
+    targetDistance = 120;
   });
 }
 
